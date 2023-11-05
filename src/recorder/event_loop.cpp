@@ -1,5 +1,7 @@
 #include "recorder/event_loop.h"
 
+#include <X11/X.h>
+
 #include <atomic>
 #include <cstdio>
 #include <stdexcept>
@@ -37,7 +39,7 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
   BYTE keycode = data->event.u.u.detail;
   const int kEsc = 9;
   switch (event_type) {
-    case KeyRelease:
+    case KeyPress:
       if (keycode == kEsc) { /* if ESC is pressed at any time, exit */
         exit_event_loop = true;
       } else {
