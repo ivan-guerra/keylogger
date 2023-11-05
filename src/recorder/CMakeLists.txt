@@ -11,7 +11,7 @@ project(
 
 add_library(${PROJECT_NAME} STATIC)
 
-target_sources(${PROJECT_NAME} PRIVATE event_loop.cpp)
+target_sources(${PROJECT_NAME} PRIVATE event_loop.cpp recorder.cpp)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${KL_INCLUDE_DIR})
 
