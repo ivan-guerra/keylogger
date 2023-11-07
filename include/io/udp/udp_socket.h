@@ -11,7 +11,7 @@ namespace keylogger {
 
 /*!
  * \class UdpSocket
- * \brief The UdpSocket class is a wrapper around a Linux UDP socket.
+ * \brief The UdpSocket class is a cross platform wrapper around a UDP socket.
  */
 class UdpSocket {
  public:

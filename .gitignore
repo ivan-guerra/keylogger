@@ -9,3 +9,6 @@ compile_commands.json
 
 # Ignore clang's symbol cache.
 .cache
+
+# Ignore Doxygen output
+docs/keylogger
