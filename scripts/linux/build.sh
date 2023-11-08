@@ -18,6 +18,7 @@ Main()
     cmake ../ \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         -DBUILD_DOCS=ON \
+        -DBUILD_TESTS=ON \
         -DCMAKE_INSTALL_PREFIX=$KL_BIN_DIR \
         -DCMAKE_BUILD_TYPE=$BUILD_TYPE && \
         make -j$(nproc) all                  && \
