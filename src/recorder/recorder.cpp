@@ -42,12 +42,7 @@ void FileRecorder::Transmit() {
 }
 
 NetworkRecorder::NetworkRecorder(int key_limit, const std::string& ip, int port)
-    : Recorder(key_limit) {
-  if (!tx_socket_.Open(ip, port)) {
-    throw std::runtime_error("unable to open udp socket " + ip + ":" +
-                             std::to_string(port));
-  }
-}
+    : Recorder(key_limit), tx_socket_(ip, port) {}
 
 void NetworkRecorder::Transmit() {
   if (!num_keys_) {
