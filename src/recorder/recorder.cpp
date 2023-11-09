@@ -8,10 +8,11 @@
 
 namespace keylogger {
 
-Recorder::Recorder(int key_limit) : num_keys_(0), keys_(key_limit) {
+Recorder::Recorder(int key_limit) : num_keys_(0) {
   if (key_limit <= 0) {
     throw std::invalid_argument("key_limit must be a positive integer");
   }
+  keys_.resize(key_limit);
 }
 
 void Recorder::BufferKeyPress(char character) {
