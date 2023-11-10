@@ -17,4 +17,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${KL_INCLUDE_DIR})
 
 if(UNIX)
   target_link_libraries(${PROJECT_NAME} PRIVATE X11::X11 X11::Xtst udp)
+elseif(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE udp)
 endif()

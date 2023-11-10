@@ -142,4 +142,94 @@ void keylogger::RecordKeyPressEvents(keylogger::Recorder* recorder) {
   ::XCloseDisplay(ctrl_disp);
 }
 
+#elif defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
+#include <conio.h>
+#include <windows.h>
+
+#include <condition_variable>
+#include <cstdint>
+#include <mutex>
+#include <string>
+#include <thread>
+
+static bool exit = false;
+static std::mutex exit_mtx;
+static std::condition_variable exit_event_loop;
+
+/* https://stackoverflow.com/questions/1387064/how-to-get-the-error-message-from-the-error-code-returned-by-getlasterror
+ */
+static std::string GetLastErrorAsString() {
+  /* get the error message ID, if any */
+  DWORD errorMessageID = ::GetLastError();
+  if (errorMessageID == 0) {
+    return std::string(); /* no error message has been recorded */
+  }
+
+  LPSTR messageBuffer = nullptr;
+
+  /* Ask Win32 to give us the string version of that message ID.
+   * The parameters we pass in, tell Win32 to create the buffer that holds
+   * the message for us (because we don't yet know how long the message
+   * string will be).
+   */
+  size_t size = FormatMessageA(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+          FORMAT_MESSAGE_IGNORE_INSERTS,
+      NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      (LPSTR)&messageBuffer, 0, NULL);
+
+  /* copy the error message into a std::string */
+  std::string message(messageBuffer, size);
+
+  /* free the Win32's string's buffer */
+  LocalFree(messageBuffer);
+
+  return message;
+}
+
+LRESULT CALLBACK KeyCallback(int nCode, WPARAM wParam, LPARAM lParam) {
+  if (nCode < 0) {
+    return CallNextHookEx(nullptr, nCode, wParam, lParam);
+  }
+
+  KBDLLHOOKSTRUCT* kbinfo = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+  if (wParam == WM_KEYDOWN) {
+    if (VK_ESCAPE == kbinfo->vkCode) {
+      std::unique_lock<std::mutex> lock(exit_mtx);
+      exit = true;
+      exit_event_loop.notify_one(); /* Signal the main thread to exit. */
+      PostQuitMessage(0);           /* Signal this kbd hook thread to exit. */
+    }
+  }
+
+  return CallNextHookEx(nullptr, nCode, wParam, lParam);
+}
+
+void InstallHook() {
+  HHOOK kbd_hook = SetWindowsHookEx(WH_KEYBOARD_LL, &KeyCallback, 0, 0);
+  if (!kbd_hook) {
+    return;
+  }
+
+  MSG message;
+  while (GetMessage(&message, nullptr, 0, 0)) {
+    DispatchMessage(&message);
+  }
+
+  UnhookWindowsHookEx(kbd_hook);
+}
+
+void keylogger::RecordKeyPressEvents(keylogger::Recorder* recorder) {
+  /* Launch a seperate thread hosting a low level keyboard hook. */
+  std::thread kbd_event_thrd(InstallHook);
+
+  /* Wait until signaled to exit by the keyboard hook. */
+  std::unique_lock<std::mutex> lock(exit_mtx);
+  exit_event_loop.wait(lock, [] { return exit; });
+
+  if (kbd_event_thrd.joinable()) {
+    kbd_event_thrd.join();
+  }
+}
+
 #endif
