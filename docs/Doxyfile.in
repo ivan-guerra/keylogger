@@ -14,6 +14,7 @@ REPEAT_BRIEF           = YES
 DISABLE_INDEX          = YES
 GENERATE_TREEVIEW      = YES
 FULL_SIDEBAR           = YES
+GENERATE_LATEX         = NO
 
 #------------------------------------------------------------------------------
 # Build related configuration options
