@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
@@ -50,9 +51,10 @@ void NetworkRecorder::Transmit() {
     return;
   }
 
-  if (tx_socket_.Send(keys_.data(), num_keys_) < 0) {
-    throw std::runtime_error("failed to transmit keys over network -> " +
-                             std::string(std::strerror(errno)));
+  int bytes_sent = tx_socket_.Send(keys_.data(), num_keys_);
+  if (bytes_sent != num_keys_) {
+    std::cerr << "warning: only" << bytes_sent << "/" << num_keys_
+              << "bytes sent" << std::endl;
   }
   num_keys_ = 0;
 }

@@ -139,7 +139,7 @@ TEST(RecorderTest,
 
 TEST(RecorderTest, NetworkRecorderTransmitRecordsDataSuccessfully) {
   keylogger::NetworkRecorder recorder(kTestKeyLimit, kTestAddr, kTestPort);
-  keylogger::UdpSocket recver(kTestPort, O_NONBLOCK);
+  keylogger::UdpSocket recver(kTestPort);
 
   /* Buffer the contents of a string. Note, that the string size does not
    * exceed the key_limit else the recorder object will flush prematurely.

@@ -31,21 +31,9 @@ TEST(UdpSocketTest,
 }
 
 TEST(UdpSocketTest,
-     SenderUdpSocketConstructorThrowsInvalidArgumentOnInvalidOptionFlag) {
-  ASSERT_THROW(auto socket = keylogger::UdpSocket(kTestAddr, kTestPort, -1),
-               std::invalid_argument);
-}
-
-TEST(UdpSocketTest,
      ReceiverUdpSocketConstructorThrowsInvalidArgumentOnInvalidPort) {
   ASSERT_THROW(auto socket = keylogger::UdpSocket(-1), std::invalid_argument);
   ASSERT_THROW(auto socket = keylogger::UdpSocket(0), std::invalid_argument);
-}
-
-TEST(UdpSocketTest,
-     ReceiverUdpSocketConstructorThrowsInvalidArgumentOnInvalidOptionFlag) {
-  ASSERT_THROW(auto socket = keylogger::UdpSocket(kTestPort, -1),
-               std::invalid_argument);
 }
 
 TEST(UdpSocketTest, GetPortReturnsSenderSocketPort) {
