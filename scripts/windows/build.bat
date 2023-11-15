@@ -8,7 +8,7 @@ if not "%1"=="" set BUILD_TYPE=%1
 
 if not exist %KL_BIN_DIR% mkdir %KL_BIN_DIR%
 
-REM Generate the kbhell Visual Studio 2022 solution.
+REM Generate the keylogger Visual Studio 2022 solution.
 cmake ^
     -G "Visual Studio 17 2022" ^
     -DBUILD_DOCS=ON ^
