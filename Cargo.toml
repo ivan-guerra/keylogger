@@ -1,0 +1,8 @@
+[package]
+name = "keylogger"
+version = "0.1.0"
+edition = "2021"
+description = "A cross platform keylogger."
+license = "Unlicense"
+
+[dependencies]
